@@ -5,7 +5,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 
-const TableLoaderOverlay = ({ loading, message = "Recalculating points..." }) => {
+const TableLoaderOverlay = ({ loading, message = 'Recalculating points...' }) => {
   if (!loading) return null;
 
   return (
@@ -21,18 +21,23 @@ const TableLoaderOverlay = ({ loading, message = "Recalculating points..." }) =>
         alignItems: 'center',
         justifyContent: 'center',
         bgcolor: alpha('#fff', 0.8),
-        backdropFilter: 'blur(2px)',
+        backdropFilter: 'blur(0.125rem)',
         zIndex: 10,
         borderRadius: 'inherit',
       }}
     >
       <CircularProgress size={40} thickness={4} />
-      <Typography variant="body2" sx={{ mt: 2, fontWeight: 700, color: 'primary.main', textTransform: 'uppercase', letterSpacing: '1px' }}>
+      <Typography
+        variant="body2"
+        sx={{ mt: '0.5rem', fontWeight: 700, color: 'primary.main', textTransform: 'uppercase', letterSpacing: '0.0625rem' }}
+      >
         {message}
       </Typography>
     </Box>
   );
 };
+
+TableLoaderOverlay.displayName = 'TableLoaderOverlay';
 
 TableLoaderOverlay.propTypes = {
   loading: PropTypes.bool.isRequired,

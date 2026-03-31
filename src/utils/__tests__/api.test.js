@@ -1,16 +1,16 @@
-import { fetchTransactions, updateTransaction } from "../api";
-import { logger } from "../logger";
+import { fetchTransactions, updateTransaction } from '../api';
+import { logger } from '../logger';
 
-// ✅ Mock logger (very important)
-jest.mock("../logger", () => ({
+jest.mock('../logger', () => ({
   logger: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
-describe("api.js", () => {
+describe('api.js', () => {
   beforeEach(() => {
     global.fetch = jest.fn();
   });
@@ -19,67 +19,90 @@ describe("api.js", () => {
     jest.clearAllMocks();
   });
 
-  // fetchTransactions success
-  test("should fetch and return transactions", async () => {
-    const mockResponse = {
-      transactions: [
-        { id: 1, amount: 100 },
-        { id: 2, amount: 200 },
-      ],
-    };
+  // ─── fetchTransactions ──────────────────────────────────────────────────────
 
-    fetch.mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse,
+  describe('fetchTransactions', () => {
+    test('happy path: returns transactions array and logs info', async () => {
+      const mockResponse = {
+        transactions: [
+          { id: '1', amount: 100 },
+          { id: '2', amount: 200 },
+        ],
+      };
+      fetch.mockResolvedValue({ ok: true, json: async () => mockResponse });
+
+      const result = await fetchTransactions();
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(mockResponse.transactions);
+      expect(logger.info).toHaveBeenCalledWith('Running in Static Demo Mode');
     });
 
-    const result = await fetchTransactions();
-
-    expect(fetch).toHaveBeenCalledWith("/db.json");
-    expect(result).toEqual(mockResponse.transactions);
-    expect(logger.info).toHaveBeenCalledWith(
-      "Running in Static Demo Mode"
-    );
-  });
-
-  // fetchTransactions failure
-  test("should throw error when fetch fails", async () => {
-    fetch.mockResolvedValue({
-      ok: false,
+    test('happy path: calls fetch exactly once', async () => {
+      fetch.mockResolvedValue({ ok: true, json: async () => ({ transactions: [] }) });
+      await fetchTransactions();
+      expect(fetch).toHaveBeenCalledTimes(1);
     });
 
-    await expect(fetchTransactions()).rejects.toThrow(
-      "Static fetch failed"
-    );
-
-    expect(logger.error).toHaveBeenCalled();
-  });
-
-  // network error
-  test("should handle network error", async () => {
-    fetch.mockRejectedValue(new Error("Network Error"));
-
-    await expect(fetchTransactions()).rejects.toThrow(
-      "Network Error"
-    );
-
-    expect(logger.error).toHaveBeenCalledWith(
-      "API error",
-      expect.any(Error)
-    );
-  });
-
-  // updateTransaction
-  test("should return static success response", async () => {
-    const result = await updateTransaction();
-
-    expect(result).toEqual({
-      success: true,
-      message: "Read-only mode",
+    // Branch: response.ok === false — throws "Static fetch failed" wrapped
+    test('throws wrapped error when response.ok is false', async () => {
+      fetch.mockResolvedValue({ ok: false });
+      await expect(fetchTransactions()).rejects.toThrow('Failed to fetch transactions');
+      expect(logger.error).toHaveBeenCalledWith('API error', expect.any(Error));
     });
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      "Update operation ignored in Static Demo Mode"
-    );
+    test('wrapped error message includes the original "Static fetch failed" cause', async () => {
+      fetch.mockResolvedValue({ ok: false });
+      const err = await fetchTransactions().catch(e => e);
+      expect(err.message).toContain('Static fetch failed');
+    });
+
+    // Branch: fetch() itself rejects (network-level error)
+    test('throws wrapped error on network-level failure', async () => {
+      fetch.mockRejectedValue(new Error('Network Error'));
+      await expect(fetchTransactions()).rejects.toThrow('Failed to fetch transactions');
+      expect(logger.error).toHaveBeenCalledWith('API error', expect.any(Error));
+    });
+
+    test('wrapped error message includes original network error cause', async () => {
+      fetch.mockRejectedValue(new Error('Network Error'));
+      const err = await fetchTransactions().catch(e => e);
+      expect(err.message).toContain('Network Error');
+    });
+
+    // Branch: json() parse fails
+    test('throws wrapped error on JSON parse failure', async () => {
+      fetch.mockResolvedValue({
+        ok: true,
+        json: async () => { throw new Error('JSON parse error'); },
+      });
+      await expect(fetchTransactions()).rejects.toThrow('Failed to fetch transactions');
+      expect(logger.error).toHaveBeenCalled();
+    });
+
+    test('wrapped error includes JSON parse cause message', async () => {
+      fetch.mockResolvedValue({
+        ok: true,
+        json: async () => { throw new Error('JSON parse error'); },
+      });
+      const err = await fetchTransactions().catch(e => e);
+      expect(err.message).toContain('JSON parse error');
+    });
+
+    // Branch: error?.message ?? String(error) — error with no .message property
+    test('falls back to String(error) when caught value has no .message', async () => {
+      // Throwing a plain string (no .message property)
+      fetch.mockRejectedValue('raw string error');
+      const err = await fetchTransactions().catch(e => e);
+      // error?.message is undefined => String('raw string error') = 'raw string error'
+      expect(err.message).toContain('raw string error');
+    });
+
+    // Confirms logger.error is always called before rethrowing
+    test('always calls logger.error before rethrowing', async () => {
+      fetch.mockRejectedValue(new Error('any'));
+      await fetchTransactions().catch(() => {});
+      expect(logger.error).toHaveBeenCalledTimes(1);
+    });
   });
 });

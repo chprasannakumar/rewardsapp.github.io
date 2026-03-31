@@ -16,14 +16,6 @@ export const fetchTransactions = async () => {
     return data.transactions;
   } catch (error) {
     logger.error("API error", error);
-    throw error;
+    throw new Error(`Failed to fetch transactions: ${error?.message ?? String(error)}`);
   }
-};
-
-/**
- * Updates a transaction on the server.
- */
-export const updateTransaction = async () => {
-  logger.warn("Update operation ignored in Static Demo Mode");
-  return { success: true, message: "Read-only mode" };
 };

@@ -1,113 +1,170 @@
 import { logger } from './logger';
+import { MONTH_NAMES } from '../constants';
 
 export const calculatePoints = (price) => {
-  if (typeof price !== 'number') return 0;
-  // Based on tips: Handle decimal calculations
-  // ex: purchase 100.2 $ then reward is 50 points
-  // purchase 100.4 $ then reward is 50 points
-  const amount = Math.floor(price);
-  let points = 0;
-  
-  if (amount <= 50) {
-    points = 0;
-  } else if (amount <= 100) {
-    points = amount - 50;
-  } else {
-    points = (amount - 100) * 2 + 50;
-  }
+  try {
+    if (price == null || typeof price !== 'number' || isNaN(price)) {
+      throw new Error(`calculatePoints received invalid price: ${price}`);
+    }
 
-  if (price !== amount) {
-    logger.debug(`Decimal reward calculation: $${price} floored to $${amount} -> ${points} pts`);
+    const amount = Math.floor(price);
+    let points = 0;
+
+    if (amount <= 50) {
+      points = 0;
+    } else if (amount <= 100) {
+      points = amount - 50;
+    } else {
+      points = (amount - 100) * 2 + 50;
+    }
+
+    if (price !== amount) {
+      logger.debug(`Decimal reward calculation: $${price} floored to $${amount} -> ${points} pts`);
+    }
+
+    return points;
+  } catch (error) {
+    throw new Error(`calculatePoints failed: ${error?.message ?? String(error)}`);
   }
-  
-  return points;
 };
 
 export const getMonthYear = (dateString) => {
-  const dateObj = new Date(dateString);
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  
-  return {
-    monthString: monthNames[dateObj.getMonth()],
-    monthIndex: dateObj.getMonth(),
-    yearString: dateObj.getFullYear().toString(),
-    year: dateObj.getFullYear()
-  };
-};
+  try {
+    if (!dateString) {
+      throw new Error('getMonthYear received a null or undefined dateString');
+    }
 
-export const processTransactions = (transactions) => {
-  const processedData = transactions.reduce((acc, tx) => {
-    const points = calculatePoints(tx.price);
-    const { monthString, monthIndex, year } = getMonthYear(tx.purchaseDate);
-
-    // 1. Transactions with points
-    const newTx = {
-      ...tx,
-      points,
-      monthIndex,
-      year
-    };
-
-    // 2. Monthly Rewards Calculation
-    const monthKey = `${tx.customerId}_${year}_${monthString}`;
-    const currentMonthlyReward = acc.monthlyRewards[monthKey] || {
-      customerId: tx.customerId,
-      customerName: tx.customerName,
-      month: monthString,
-      monthIndex,
-      year,
-      points: 0
-    };
-
-    // 3. Total Rewards Calculation
-    const currentTotalReward = acc.totalRewards[tx.customerId] || {
-      customerId: tx.customerId,
-      customerName: tx.customerName,
-      points: 0
-    };
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) {
+      throw new Error(`getMonthYear received an invalid date string: "${dateString}"`);
+    }
 
     return {
-      processedTransactions: [...acc.processedTransactions, newTx],
-      monthlyRewards: {
-        ...acc.monthlyRewards,
-        [monthKey]: {
-          ...currentMonthlyReward,
-          points: currentMonthlyReward.points + points
-        }
-      },
-      totalRewards: {
-        ...acc.totalRewards,
-        [tx.customerId]: {
-          ...currentTotalReward,
-          points: currentTotalReward.points + points
-        }
-      }
+      monthString: MONTH_NAMES[dateObj.getMonth()],
+      monthIndex: dateObj.getMonth(),
+      yearString: dateObj.getFullYear().toString(),
+      year: dateObj.getFullYear(),
     };
-  }, {
-    processedTransactions: [],
-    monthlyRewards: {},
-    totalRewards: {}
-  });
-
-  return {
-    transactions: sortTransactionsByDate(processedData.processedTransactions),
-    monthlyRewards: sortMonthlyRewards(Object.values(processedData.monthlyRewards)),
-    totalRewards: sortTotalRewards(Object.values(processedData.totalRewards))
-  };
+  } catch (error) {
+    throw new Error(`getMonthYear failed: ${error?.message ?? String(error)}`);
+  }
 };
 
 export const sortTransactionsByDate = (transactions) => {
-  return [...transactions].sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
+  try {
+    if (!Array.isArray(transactions)) {
+      throw new Error('sortTransactionsByDate expected an array of transactions');
+    }
+
+    return [...transactions].sort(
+      (a, b) =>
+        new Date(b?.purchaseDate ?? 0).getTime() -
+        new Date(a?.purchaseDate ?? 0).getTime()
+    );
+  } catch (error) {
+    throw new Error(`sortTransactionsByDate failed: ${error?.message ?? String(error)}`);
+  }
 };
 
 export const sortMonthlyRewards = (rewards) => {
-  return [...rewards].sort((a, b) => {
-    if (a.year !== b.year) return b.year - a.year; // Descending year
-    return b.monthIndex - a.monthIndex; // Descending month
-  });
+  try {
+    if (!Array.isArray(rewards)) {
+      throw new Error('sortMonthlyRewards expected an array of rewards');
+    }
+
+    return [...rewards].sort((a, b) => {
+      if ((a?.year ?? 0) !== (b?.year ?? 0)) return (b?.year ?? 0) - (a?.year ?? 0);
+      return (b?.monthIndex ?? 0) - (a?.monthIndex ?? 0);
+    });
+  } catch (error) {
+    throw new Error(`sortMonthlyRewards failed: ${error?.message ?? String(error)}`);
+  }
 };
 
 export const sortTotalRewards = (rewards) => {
-  // descending order of points
-  return [...rewards].sort((a, b) => b.points - a.points);
+  try {
+    if (!Array.isArray(rewards)) {
+      throw new Error('sortTotalRewards expected an array of rewards');
+    }
+
+    return [...rewards].sort((a, b) => (b?.points ?? 0) - (a?.points ?? 0));
+  } catch (error) {
+    throw new Error(`sortTotalRewards failed: ${error?.message ?? String(error)}`);
+  }
+};
+
+export const processTransactions = (transactions) => {
+  try {
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return { transactions: [], monthlyRewards: [], totalRewards: [] };
+    }
+
+    const processedData = transactions.reduce(
+      (acc, tx) => {
+        if (!tx?.id || !tx?.customerId || !tx?.purchaseDate) return acc;
+
+        let points;
+        let dateInfo;
+
+        try {
+          points = calculatePoints(tx.price);
+        } catch {
+          logger.debug(`Skipping transaction ${tx.id}: invalid price "${tx.price}"`);
+          return acc;
+        }
+
+        try {
+          dateInfo = getMonthYear(tx.purchaseDate);
+        } catch {
+          logger.debug(`Skipping transaction ${tx.id}: invalid purchaseDate "${tx.purchaseDate}"`);
+          return acc;
+        }
+
+        const { monthString, monthIndex, year } = dateInfo;
+
+        const newTx = { ...tx, points, monthIndex, year };
+
+        const monthKey = `${tx.customerId}_${year}_${monthString}`;
+        const currentMonthlyReward = acc.monthlyRewards[monthKey] || {
+          customerId: tx.customerId,
+          customerName: tx.customerName ?? 'Unknown',
+          month: monthString,
+          monthIndex,
+          year,
+          points: 0,
+        };
+
+        const currentTotalReward = acc.totalRewards[tx.customerId] || {
+          customerId: tx.customerId,
+          customerName: tx.customerName ?? 'Unknown',
+          points: 0,
+        };
+
+        return {
+          processedTransactions: [...acc.processedTransactions, newTx],
+          monthlyRewards: {
+            ...acc.monthlyRewards,
+            [monthKey]: { ...currentMonthlyReward, points: currentMonthlyReward.points + points },
+          },
+          totalRewards: {
+            ...acc.totalRewards,
+            [tx.customerId]: { ...currentTotalReward, points: currentTotalReward.points + points },
+          },
+        };
+      },
+      { processedTransactions: [], monthlyRewards: {}, totalRewards: {} }
+    );
+
+    const sortedTransactions = sortTransactionsByDate(processedData.processedTransactions);
+    const sortedMonthly = sortMonthlyRewards(Object.values(processedData.monthlyRewards));
+    const sortedTotal = sortTotalRewards(Object.values(processedData.totalRewards));
+
+    return {
+      transactions: sortedTransactions,
+      monthlyRewards: sortedMonthly,
+      totalRewards: sortedTotal,
+    };
+  } catch (error) {
+    throw new Error(`processTransactions failed: ${error?.message ?? String(error)}`);
+  }
 };

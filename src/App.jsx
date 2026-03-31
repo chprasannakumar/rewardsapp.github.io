@@ -1,45 +1,27 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import PropTypes from 'prop-types';
-import Dashboard from './pages/Dashboard';
 import ThemeProvider from '@mui/material/styles/ThemeProvider';
 import createTheme from '@mui/material/styles/createTheme';
 import CssBaseline from '@mui/material/CssBaseline';
+import Loader from './components/common/Loader';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 
 const lightTheme = createTheme({
   palette: {
     mode: 'light',
-    primary: {
-      main: '#4f46e5', // Deep indigo
-      contrastText: '#ffffff',
-    },
-    secondary: {
-      main: '#f43f5e', // Rose
-    },
-    success: {
-      main: '#10b981', // Emerald
-    },
-    background: {
-      default: '#f8fafc',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#0f172a',
-      secondary: '#64748b',
-    },
+    primary: { main: '#4f46e5', contrastText: '#ffffff' },
+    secondary: { main: '#f43f5e' },
+    success: { main: '#10b981' },
+    background: { default: '#f8fafc', paper: '#ffffff' },
+    text: { primary: '#0f172a', secondary: '#64748b' },
   },
   typography: {
     fontFamily: '"Inter", "Outfit", "Roboto", "Helvetica", "Arial", sans-serif',
-    h5: {
-      fontWeight: 700,
-    },
-    h1: {
-      fontWeight: 800,
-    },
+    h5: { fontWeight: 700 },
+    h1: { fontWeight: 800 },
   },
-  shape: {
-    borderRadius: 12,
-  },
+  shape: { borderRadius: 12 },
   components: {
     MuiButton: {
       styleOverrides: {
@@ -65,31 +47,18 @@ const lightTheme = createTheme({
   },
 });
 
-const PrivateRoute = ({ children }) => {
-  return children;
-};
-
-PrivateRoute.propTypes = {
-  children: PropTypes.node.isRequired
-};
-
 function App() {
   return (
     <ThemeProvider theme={lightTheme}>
       <CssBaseline />
-        <HashRouter>
+      <HashRouter>
+        <Suspense fallback={<Loader />}>
           <Routes>
-            <Route 
-              path="/" 
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              } 
-            />
+            <Route path="/" element={<Dashboard />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </HashRouter>
+        </Suspense>
+      </HashRouter>
     </ThemeProvider>
   );
 }
