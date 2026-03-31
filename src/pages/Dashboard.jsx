@@ -11,6 +11,7 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import { logger } from '../utils/logger';
+import Autocomplete from '@mui/material/Autocomplete';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
@@ -43,9 +44,18 @@ const Dashboard = () => {
 
   const months = [
     { value: 'all', label: 'All Months' },
-    { value: '11', label: 'December' },
     { value: '0', label: 'January' },
-    { value: '1', label: 'February' }
+    { value: '1', label: 'February' },
+    { value: '2', label: 'March' },
+    { value: '3', label: 'April' },
+    { value: '4', label: 'May' },
+    { value: '5', label: 'June' },
+    { value: '6', label: 'July' },
+    { value: '7', label: 'August' },
+    { value: '8', label: 'September' },
+    { value: '9', label: 'October' },
+    { value: '10', label: 'November' },
+    { value: '11', label: 'December' }
   ];
 
   const loadData = useCallback(async (showLoading = true) => {
@@ -175,20 +185,23 @@ const Dashboard = () => {
                 <Typography sx={{ fontWeight: 800, color: '#1e293b' }}>Filters:</Typography>
               </Box>
 
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Customer</InputLabel>
-                <Select
-                  label="Customer"
-                  value={filters.userId}
-                  onChange={(e) => updateFilters('userId', e.target.value)}
-                  sx={{ borderRadius: 3, fontWeight: 600 }}
-                >
-                  <MenuItem value="all"><em>All Customers</em></MenuItem>
-                  {totalRewards.map(u => (
-                    <MenuItem key={u.customerId} value={u.customerId}>{u.customerName}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                size="small"
+                sx={{ minWidth: 200 }}
+                options={totalRewards}
+                getOptionLabel={(option) => option?.customerName || ''}
+                isOptionEqualToValue={(option, value) => option?.customerId === value?.customerId}
+                value={totalRewards.find(u => u.customerId === filters.userId) || null}
+                onChange={(e, newValue) => updateFilters('userId', newValue?.customerId ?? 'all')}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Customer"
+                    placeholder="All Customers"
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, fontWeight: 600 } }}
+                  />
+                )}
+              />
 
               <FormControl size="small" sx={{ minWidth: 160 }}>
                 <InputLabel>Month</InputLabel>

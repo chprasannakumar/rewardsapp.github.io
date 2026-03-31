@@ -2,8 +2,6 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
-import { AuthProvider, useAuth } from './context/AuthContext';
 import ThemeProvider from '@mui/material/styles/ThemeProvider';
 import createTheme from '@mui/material/styles/createTheme';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -68,10 +66,6 @@ const lightTheme = createTheme({
 });
 
 const PrivateRoute = ({ children }) => {
-  const { user } = useAuth();
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
   return children;
 };
 
@@ -83,10 +77,8 @@ function App() {
   return (
     <ThemeProvider theme={lightTheme}>
       <CssBaseline />
-      <AuthProvider>
         <HashRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
             <Route 
               path="/" 
               element={
@@ -98,7 +90,6 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </HashRouter>
-      </AuthProvider>
     </ThemeProvider>
   );
 }
