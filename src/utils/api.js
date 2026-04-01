@@ -1,6 +1,6 @@
 import { logger } from './logger';
 
-const STATIC_URL = `${import.meta.env.BASE_URL}db.json`;
+const STATIC_URL = `db.json`;
 
 /**
  * Fetches transactions from the server.

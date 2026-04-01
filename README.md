@@ -6,9 +6,8 @@ A React dashboard for tracking customer reward points earned from purchase trans
 
 | Layer | Technology |
 |---|---|
-| **UI Framework** | [React 18](https://react.dev/) with functional components and hooks |
-| **Component Library** | [MUI (Material UI) v5](https://mui.com/) — tables, inputs, icons, theming |
-| **Build Tool** | [Vite](https://vitejs.dev/) — fast dev server and optimised production builds |
+| **UI Framework** | [React 19](https://react.dev/) with functional components and hooks |
+| **Component Library** | [MUI (Material UI) v6](https://mui.com/) — tables, inputs, icons, theming |
 | **Language** | JavaScript (ES2022) with JSX |
 | **Styling** | MUI `sx` prop + CSS-in-JS theme via `createTheme` |
 | **State Management** | React built-ins — `useState`, `useReducer`, `useMemo`, `useCallback`, `useEffect` |
@@ -35,13 +34,9 @@ A React dashboard for tracking customer reward points earned from purchase trans
    ```bash
    npm install
    ```
-2. Start the mock backend server (`json-server`) on port 3001:
+2. In a separate terminal, start the React frontend:
    ```bash
-   npx json-server --watch db.json --port 3001
-   ```
-3. In a separate terminal, start the React frontend:
-   ```bash
-   npm run dev
+   npm start
    ```
 
 ## Project Architecture and High-Level Approach
@@ -49,7 +44,7 @@ A React dashboard for tracking customer reward points earned from purchase trans
 This application focuses on **Separation of Concerns** and **Performance Optimization**:
 
 -   **Data Processing Layer (`/src/utils/dataProcessor.js`)**: All aggregation and calculation logic is strictly functional. We use `.reduce()` to transform the raw transaction list into a structured graph of Monthly and Total rewards without mutating any original data.
--   **State Management**: Instead of using Redux (per requirement), we consolidated the dashboard's operational state into a single object in `Dashboard.jsx`. This reduces "state jitter" and ensures synchronous UI updates.
+-   **State Management**: Instead of using Redux (per requirement), we consolidated the dashboard's operational state into a single object in `Dashboard.js`. This reduces "state jitter" and ensures synchronous UI updates.
 -   **Pure Functional calculation**: Points are calculated atomistically for each transaction, allowing for easy testing and debugging of decimal-sensitive prices.
 -   **Styling**: A bespoke glassmorphism theme was built using material UI for a premium, tailored aesthetic.
 
@@ -62,7 +57,7 @@ The project includes a comprehensive test suite using **Jest**. These tests vali
 
 Run the tests with:
 ```bash
-npm run test
+npm test
 ```
 ### Add Transaction Data
 

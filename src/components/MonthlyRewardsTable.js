@@ -28,9 +28,31 @@ const MonthlyRewardsTable = ({ rewards, isLoading }) => {
 
   const sortedRewards = useMemo(() => {
     if (!Array.isArray(rewards)) return [];
+
+    const extractNumeric = (str) => {
+      const n = parseInt((str ?? '').replace(/\D/g, ''), 10);
+      return isNaN(n) ? 0 : n;
+    };
+
     return [...rewards].sort((a, b) => {
-      const aValue = a?.[orderBy] ?? '';
-      const bValue = b?.[orderBy] ?? '';
+      let aValue = a?.[orderBy] ?? '';
+      let bValue = b?.[orderBy] ?? '';
+
+      // Sort customerId numerically (u9 < u36, not lexicographically)
+      if (orderBy === 'customerId') {
+        aValue = extractNumeric(aValue);
+        bValue = extractNumeric(bValue);
+        return order === SORT_DIRECTION.ASC ? aValue - bValue : bValue - aValue;
+      }
+
+      // Sort points numerically
+      if (orderBy === 'points' || orderBy === 'year') {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+        return order === SORT_DIRECTION.ASC ? aValue - bValue : bValue - aValue;
+      }
+
+      // Default: string comparison
       if (bValue < aValue) return order === SORT_DIRECTION.ASC ? 1 : -1;
       if (bValue > aValue) return order === SORT_DIRECTION.ASC ? -1 : 1;
       return 0;

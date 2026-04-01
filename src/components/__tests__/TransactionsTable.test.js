@@ -52,7 +52,7 @@ describe('TransactionsTable — basic rendering', () => {
     expect(screen.getByText('No transactions found.')).toBeInTheDocument();
   });
 
-  it('count badge is absent in empty state (ReusableTable renders early)', () => {
+  it('count badge is absent in empty state', () => {
     render(<TransactionsTable transactions={[]} />);
     expect(screen.queryByText(/Records Shown/)).not.toBeInTheDocument();
   });
@@ -64,6 +64,11 @@ describe('TransactionsTable — basic rendering', () => {
 
   it('does not render loading overlay when isLoading is false', () => {
     render(<TransactionsTable transactions={DATA} isLoading={false} />);
+    expect(screen.queryByText('Processing...')).not.toBeInTheDocument();
+  });
+
+  it('does not render loading overlay when isLoading is not provided', () => {
+    render(<TransactionsTable transactions={DATA} />);
     expect(screen.queryByText('Processing...')).not.toBeInTheDocument();
   });
 
@@ -79,30 +84,24 @@ describe('TransactionsTable — basic rendering', () => {
     expect(screen.getAllByRole('row')).toHaveLength(4); // 1 header + 3 data
   });
 
-  it('does not crash when onUpdate is not provided', () => {
-    expect(() => render(<TransactionsTable transactions={DATA} />)).not.toThrow();
-  });
-
   it('does not crash when isLoading is not provided', () => {
     expect(() => render(<TransactionsTable transactions={DATA} />)).not.toThrow();
   });
 });
 
-// ─── sortedTransactions non-array guard (line 31) ────────────────────────────
+// ─── sortedTransactions non-array guard ──────────────────────────────────────
 
 describe('TransactionsTable — non-array transactions guard', () => {
-  it('renders empty table (not a crash) when transactions is not an array', () => {
-    // The useMemo guard: !Array.isArray(transactions) => return []
-    // PropTypes will warn but it must not throw
-    expect(() =>
-      render(<TransactionsTable transactions={null} />)
-    ).not.toThrow();
+  it('renders empty table when transactions is null', () => {
+    expect(() => render(<TransactionsTable transactions={null} />)).not.toThrow();
   });
 
   it('renders empty table when transactions is undefined', () => {
-    expect(() =>
-      render(<TransactionsTable transactions={undefined} />)
-    ).not.toThrow();
+    expect(() => render(<TransactionsTable transactions={undefined} />)).not.toThrow();
+  });
+
+  it('renders empty table when transactions is a string', () => {
+    expect(() => render(<TransactionsTable transactions="bad" />)).not.toThrow();
   });
 });
 
@@ -119,6 +118,12 @@ describe('TransactionsTable — renderCell id', () => {
       render(<TransactionsTable transactions={[makeTx({ id: null })]} />)
     ).not.toThrow();
   });
+
+  it('renders #undefined safely when id is undefined', () => {
+    expect(() =>
+      render(<TransactionsTable transactions={[makeTx({ id: undefined })]} />)
+    ).not.toThrow();
+  });
 });
 
 // ─── renderCell — customerName ───────────────────────────────────────────────
@@ -133,6 +138,11 @@ describe('TransactionsTable — renderCell customerName', () => {
     render(<TransactionsTable transactions={[makeTx({ customerName: null })]} />);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('renders em-dash when customerName is undefined', () => {
+    render(<TransactionsTable transactions={[makeTx({ customerName: undefined })]} />);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+  });
 });
 
 // ─── renderCell — purchaseDate ───────────────────────────────────────────────
@@ -145,13 +155,16 @@ describe('TransactionsTable — renderCell purchaseDate', () => {
 
   it('renders em-dash when purchaseDate is null (falsy branch)', () => {
     render(<TransactionsTable transactions={[makeTx({ purchaseDate: null })]} />);
-    // The ternary: tx?.purchaseDate ? format : '—'
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders em-dash when purchaseDate is empty string (falsy branch)', () => {
+    render(<TransactionsTable transactions={[makeTx({ purchaseDate: '' })]} />);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders formatted date when purchaseDate is present (truthy branch)', () => {
     render(<TransactionsTable transactions={[TX_A]} />);
-    // Any formatted date string is present (locale-dependent, just assert not ISO)
     expect(screen.queryByText('2024-01-15T10:00:00Z')).not.toBeInTheDocument();
   });
 });
@@ -168,18 +181,28 @@ describe('TransactionsTable — renderCell productPurchased', () => {
     render(<TransactionsTable transactions={[makeTx({ productPurchased: null })]} />);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('renders em-dash when productPurchased is undefined', () => {
+    render(<TransactionsTable transactions={[makeTx({ productPurchased: undefined })]} />);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+  });
 });
 
-// ─── renderCell — price ──────────────────────────────────────────────────────
+// ─── renderCell — price (cents visible) ──────────────────────────────────────
 
 describe('TransactionsTable — renderCell price', () => {
-  it('formats price with two decimal places (price != null branch)', () => {
+  it('formats price with two decimal places — cents are shown', () => {
     render(<TransactionsTable transactions={[TX_A]} />);
     expect(screen.getByText(/151\.00/)).toBeInTheDocument();
   });
 
-  it('renders $0.00 when price is null (price == null branch)', () => {
+  it('renders $0.00 when price is null', () => {
     render(<TransactionsTable transactions={[makeTx({ price: null })]} />);
+    expect(screen.getByText(/\$0\.00/)).toBeInTheDocument();
+  });
+
+  it('renders $0.00 when price is 0', () => {
+    render(<TransactionsTable transactions={[makeTx({ id: 'tz', price: 0 })]} />);
     expect(screen.getByText(/\$0\.00/)).toBeInTheDocument();
   });
 
@@ -188,14 +211,24 @@ describe('TransactionsTable — renderCell price', () => {
     expect(screen.getByText(/75\.00/)).toBeInTheDocument();
   });
 
-  it('formats price 0 as $0.00', () => {
-    render(<TransactionsTable transactions={[makeTx({ id: 'tz', price: 0 })]} />);
-    expect(screen.getByText(/\$0\.00/)).toBeInTheDocument();
+  it('renders cents correctly for $120.50', () => {
+    render(<TransactionsTable transactions={[makeTx({ id: 'tc', price: 120.50 })]} />);
+    expect(screen.getByText(/120\.50/)).toBeInTheDocument();
+  });
+
+  it('renders cents correctly for $99.99', () => {
+    render(<TransactionsTable transactions={[makeTx({ id: 'td', price: 99.99 })]} />);
+    expect(screen.getByText(/99\.99/)).toBeInTheDocument();
   });
 
   it('formats large price with commas', () => {
     render(<TransactionsTable transactions={[makeTx({ id: 'tb', price: 1000000 })]} />);
     expect(screen.getByText(/1,000,000\.00/)).toBeInTheDocument();
+  });
+
+  it('formats price with decimal cents — $1,234.56', () => {
+    render(<TransactionsTable transactions={[makeTx({ id: 'te', price: 1234.56 })]} />);
+    expect(screen.getByText(/1,234\.56/)).toBeInTheDocument();
   });
 });
 
@@ -213,8 +246,13 @@ describe('TransactionsTable — renderCell points', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 
-  it('renders 0 when points is null (null coalescing ?? 0)', () => {
+  it('renders 0 when points is null', () => {
     render(<TransactionsTable transactions={[makeTx({ points: null })]} />);
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('renders 0 when points is undefined', () => {
+    render(<TransactionsTable transactions={[makeTx({ points: undefined })]} />);
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 });
@@ -255,28 +293,38 @@ describe('TransactionsTable — sorting purchaseDate', () => {
   });
 });
 
-// ─── Sorting — price (generic field, covers bValue<aValue and bValue>aValue) ─
+// ─── Sorting — price ─────────────────────────────────────────────────────────
 
 describe('TransactionsTable — sorting price (covers all comparator branches)', () => {
-  it('sort Price ASC: bValue < aValue => return 1 (lowest first = Carol $50)', () => {
+  it('sort Price ASC: lowest price first (Carol $50)', () => {
     render(<TransactionsTable transactions={DATA} />);
     fireEvent.click(screen.getByText('Price'));
     const rows = screen.getAllByRole('row').slice(1);
-    expect(rows[0].textContent).toContain('Carol White'); // $50 lowest
+    expect(rows[0].textContent).toContain('Carol White');
   });
 
-  it('sort Price DESC: bValue > aValue => return -1 (highest first = Alice $151)', () => {
+  it('sort Price DESC: highest price first (Alice $151)', () => {
     render(<TransactionsTable transactions={DATA} />);
     fireEvent.click(screen.getByText('Price'));
     fireEvent.click(screen.getByText('Price'));
     const rows = screen.getAllByRole('row').slice(1);
-    expect(rows[0].textContent).toContain('Alice Smith'); // $151 highest
+    expect(rows[0].textContent).toContain('Alice Smith');
   });
 
   it('sort comparator equal-value branch returns 0 and does not throw', () => {
     const tie1 = makeTx({ id: 'ta', price: 100 });
     const tie2 = makeTx({ id: 'tb', price: 100 });
     expect(() => render(<TransactionsTable transactions={[tie1, tie2]} />)).not.toThrow();
+  });
+
+  it('cents in price sort correctly — $75.99 before $75.00 in DESC', () => {
+    const low  = makeTx({ id: 'ta', customerName: 'LowCents',  price: 75.00 });
+    const high = makeTx({ id: 'tb', customerName: 'HighCents', price: 75.99 });
+    render(<TransactionsTable transactions={[low, high]} />);
+    fireEvent.click(screen.getByText('Price'));       // ASC
+    fireEvent.click(screen.getByText('Price'));       // DESC
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].textContent).toContain('HighCents');
   });
 });
 
@@ -299,7 +347,7 @@ describe('TransactionsTable — sorting customerName', () => {
   });
 });
 
-// ─── Sorting — ID (parseInt branch, lines 39–42) ────────────────────────────
+// ─── Sorting — ID (parseInt branch) ─────────────────────────────────────────
 
 describe('TransactionsTable — sorting ID (parseInt path)', () => {
   it('sort by ID ASC: numeric ids parsed and sorted correctly', () => {
@@ -309,7 +357,6 @@ describe('TransactionsTable — sorting ID (parseInt path)', () => {
     render(<TransactionsTable transactions={[t1, t2, t3]} />);
     fireEvent.click(screen.getByText('ID'));
     const rows = screen.getAllByRole('row').slice(1);
-    // ASC: 2, 10, 30
     expect(rows[0].textContent).toContain('Two');
   });
 
@@ -321,14 +368,21 @@ describe('TransactionsTable — sorting ID (parseInt path)', () => {
     fireEvent.click(screen.getByText('ID'));
     fireEvent.click(screen.getByText('ID'));
     const rows = screen.getAllByRole('row').slice(1);
-    // DESC: 30, 10, 2
     expect(rows[0].textContent).toContain('Thirty');
   });
 
-  it('id with no digits (empty after replace) falls back to 0', () => {
+  it('id with no digits falls back to 0', () => {
     const tNoDigit = makeTx({ id: 'abc', customerName: 'NoDigit' });
     const tNormal  = makeTx({ id: 't5',  customerName: 'Five' });
     render(<TransactionsTable transactions={[tNoDigit, tNormal]} />);
+    fireEvent.click(screen.getByText('ID'));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('sort by ID with tie (same numeric value) does not throw', () => {
+    const t1 = makeTx({ id: 'x5', customerName: 'First' });
+    const t2 = makeTx({ id: 'y5', customerName: 'Second' });
+    render(<TransactionsTable transactions={[t1, t2]} />);
     fireEvent.click(screen.getByText('ID'));
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
@@ -337,27 +391,38 @@ describe('TransactionsTable — sorting ID (parseInt path)', () => {
 // ─── Sorting — Points Earned ──────────────────────────────────────────────────
 
 describe('TransactionsTable — sorting Points Earned', () => {
-  it('sort Points Earned does not throw', () => {
+  it('sort Points Earned ASC puts lowest points first', () => {
     render(<TransactionsTable transactions={DATA} />);
     fireEvent.click(screen.getByText('Points Earned'));
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].textContent).toContain('Carol White'); // 0 pts
   });
 
-  it('sort Points Earned twice toggles back', () => {
+  it('sort Points Earned DESC puts highest points first', () => {
     render(<TransactionsTable transactions={DATA} />);
     fireEvent.click(screen.getByText('Points Earned'));
     fireEvent.click(screen.getByText('Points Earned'));
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].textContent).toContain('Alice Smith'); // 152 pts
   });
 });
 
 // ─── Sorting — Product ────────────────────────────────────────────────────────
 
 describe('TransactionsTable — sorting Product', () => {
-  it('sort by Product column does not throw', () => {
+  it('sort by Product ASC — Laptop before Phone before Tablet', () => {
     render(<TransactionsTable transactions={DATA} />);
     fireEvent.click(screen.getByText('Product'));
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].textContent).toContain('Laptop');
+  });
+
+  it('sort by Product DESC — Tablet first', () => {
+    render(<TransactionsTable transactions={DATA} />);
+    fireEvent.click(screen.getByText('Product'));
+    fireEvent.click(screen.getByText('Product'));
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].textContent).toContain('Tablet');
   });
 });
 
@@ -386,7 +451,6 @@ describe('TransactionsTable — pagination', () => {
     fireEvent.click(screen.getByTitle('Go to next page'));
     fireEvent.mouseDown(screen.getByRole('combobox'));
     fireEvent.click(screen.getByRole('option', { name: '25' }));
-    // All 12 rows on page 0
     expect(screen.getAllByRole('row')).toHaveLength(13);
   });
 
@@ -415,6 +479,18 @@ describe('TransactionsTable — pagination', () => {
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows[0].textContent).toContain('Alice Smith');
   });
+
+  it('handleRowsPerPageChange resets page and updates rowsPerPage', () => {
+    const many = Array.from({ length: 10 }, (_, i) =>
+      makeTx({ id: `t${i}`, customerName: `User ${i}`, purchaseDate: '2024-01-01T00:00:00Z' })
+    );
+    render(<TransactionsTable transactions={many} />);
+    fireEvent.click(screen.getByTitle('Go to next page'));
+    // Change to 10 per page — should reset to page 0 and show all 10
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', { name: '10' }));
+    expect(screen.getAllByRole('row')).toHaveLength(11); // header + 10 rows
+  });
 });
 
 // ─── rowKey ───────────────────────────────────────────────────────────────────
@@ -429,7 +505,7 @@ describe('TransactionsTable — rowKey', () => {
   });
 });
 
-// ─── ErrorBoundary — catches render errors ───────────────────────────────────
+// ─── ErrorBoundary ───────────────────────────────────────────────────────────
 
 describe('TransactionsTable — ErrorBoundary', () => {
   it('renders the table normally when there is no error', () => {
@@ -441,19 +517,10 @@ describe('TransactionsTable — ErrorBoundary', () => {
     const err = console.error;
     console.error = jest.fn();
 
-    // A component that always throws on render
+    const EB = require('../common/ErrorBoundary').default;
     const Throw = () => { throw new Error('boundary test'); };
 
-    // Import ErrorBoundary directly to test the boundary itself
-    const { ErrorBoundary } = require('../common/ErrorBoundary');
-    // Use the default export path since it's a class default export
-    const EB = require('../common/ErrorBoundary').default;
-
-    render(
-      <EB>
-        <Throw />
-      </EB>
-    );
+    render(<EB><Throw /></EB>);
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     expect(screen.getByText(/boundary test/)).toBeInTheDocument();
@@ -480,6 +547,26 @@ describe('TransactionsTable — ErrorBoundary', () => {
     fireEvent.click(screen.getByRole('button', { name: /Try Again/i }));
     rerender(<EB><MaybeThrow /></EB>);
     expect(screen.getByText('Recovered')).toBeInTheDocument();
+
+    console.error = err;
+  });
+
+  it('ErrorBoundary with custom fallback prop renders custom UI', () => {
+    const err = console.error;
+    console.error = jest.fn();
+
+    const EB = require('../common/ErrorBoundary').default;
+    const Throw = () => { throw new Error('custom fallback test'); };
+    const customFallback = (msg, reset) => (
+      <div>
+        <span>Custom: {msg}</span>
+        <button onClick={reset}>Reset</button>
+      </div>
+    );
+
+    render(<EB fallback={customFallback}><Throw /></EB>);
+
+    expect(screen.getByText(/Custom: custom fallback test/)).toBeInTheDocument();
 
     console.error = err;
   });

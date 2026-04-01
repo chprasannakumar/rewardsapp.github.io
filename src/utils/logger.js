@@ -2,7 +2,7 @@
  * Simple logger utility to configure and standardize logging across the application.
  * In a production app, this can be directed to a service like DataDog or Sentry.
  */
-const isDevelopment = import.meta.env.MODE === 'development';
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 export const logger = {
   info: (message, ...optionalParams) => {

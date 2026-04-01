@@ -1,34 +1,48 @@
 import { logger } from './logger';
 import { MONTH_NAMES } from '../constants';
 
+/**
+ * calculatePoints — awards reward points for a given purchase price.
+ *
+ * Tier structure (applied to the FLOORED whole-dollar amount):
+ *   • $0 – $50    → 0 pts
+ *   • $51 – $100  → 1 pt per whole dollar over $50
+ *   • > $100      → 2 pts per whole dollar over $100 + 50 pts base
+ *
+ * Cents are intentionally excluded from tier calculation:
+ *   $100.20 → floor → $100 → 50 pts
+ *   $100.40 → floor → $100 → 50 pts
+ *   $100.99 → floor → $100 → 50 pts
+ *   $101.00 → floor → $101 → 52 pts
+ */
 export const calculatePoints = (price) => {
+  let points = 0;
   try {
     if (price == null || typeof price !== 'number' || isNaN(price)) {
       throw new Error(`calculatePoints received invalid price: ${price}`);
     }
 
-    const amount = Math.floor(price);
-    let points = 0;
+    const wholeDollars = Math.floor(price);
 
-    if (amount <= 50) {
+    if (wholeDollars <= 50) {
       points = 0;
-    } else if (amount <= 100) {
-      points = amount - 50;
+    } else if (wholeDollars <= 100) {
+      points = wholeDollars - 50;
     } else {
-      points = (amount - 100) * 2 + 50;
+      points = (wholeDollars - 100) * 2 + 50;
     }
 
-    if (price !== amount) {
-      logger.debug(`Decimal reward calculation: $${price} floored to $${amount} -> ${points} pts`);
-    }
-
+    logger.debug(`calculatePoints: $${price} (floor $${wholeDollars}) -> ${points} pts`);
     return points;
   } catch (error) {
     throw new Error(`calculatePoints failed: ${error?.message ?? String(error)}`);
+  } finally {
+    logger.debug(`calculatePoints finished for price: ${price}`);
   }
 };
 
 export const getMonthYear = (dateString) => {
+  let result = null;
   try {
     if (!dateString) {
       throw new Error('getMonthYear received a null or undefined dateString');
@@ -39,64 +53,80 @@ export const getMonthYear = (dateString) => {
       throw new Error(`getMonthYear received an invalid date string: "${dateString}"`);
     }
 
-    return {
+    result = {
       monthString: MONTH_NAMES[dateObj.getMonth()],
       monthIndex: dateObj.getMonth(),
       yearString: dateObj.getFullYear().toString(),
       year: dateObj.getFullYear(),
     };
+    return result;
   } catch (error) {
     throw new Error(`getMonthYear failed: ${error?.message ?? String(error)}`);
+  } finally {
+    logger.debug(`getMonthYear finished for: ${dateString}`);
   }
 };
 
 export const sortTransactionsByDate = (transactions) => {
+  let sorted = [];
   try {
     if (!Array.isArray(transactions)) {
       throw new Error('sortTransactionsByDate expected an array of transactions');
     }
 
-    return [...transactions].sort(
+    sorted = [...transactions].sort(
       (a, b) =>
         new Date(b?.purchaseDate ?? 0).getTime() -
         new Date(a?.purchaseDate ?? 0).getTime()
     );
+    return sorted;
   } catch (error) {
     throw new Error(`sortTransactionsByDate failed: ${error?.message ?? String(error)}`);
+  } finally {
+    logger.debug(`sortTransactionsByDate finished, result length: ${sorted.length}`);
   }
 };
 
 export const sortMonthlyRewards = (rewards) => {
+  let sorted = [];
   try {
     if (!Array.isArray(rewards)) {
       throw new Error('sortMonthlyRewards expected an array of rewards');
     }
 
-    return [...rewards].sort((a, b) => {
+    sorted = [...rewards].sort((a, b) => {
       if ((a?.year ?? 0) !== (b?.year ?? 0)) return (b?.year ?? 0) - (a?.year ?? 0);
       return (b?.monthIndex ?? 0) - (a?.monthIndex ?? 0);
     });
+    return sorted;
   } catch (error) {
     throw new Error(`sortMonthlyRewards failed: ${error?.message ?? String(error)}`);
+  } finally {
+    logger.debug(`sortMonthlyRewards finished, result length: ${sorted.length}`);
   }
 };
 
 export const sortTotalRewards = (rewards) => {
+  let sorted = [];
   try {
     if (!Array.isArray(rewards)) {
       throw new Error('sortTotalRewards expected an array of rewards');
     }
 
-    return [...rewards].sort((a, b) => (b?.points ?? 0) - (a?.points ?? 0));
+    sorted = [...rewards].sort((a, b) => (b?.points ?? 0) - (a?.points ?? 0));
+    return sorted;
   } catch (error) {
     throw new Error(`sortTotalRewards failed: ${error?.message ?? String(error)}`);
+  } finally {
+    logger.debug(`sortTotalRewards finished, result length: ${sorted.length}`);
   }
 };
 
 export const processTransactions = (transactions) => {
+  let result = { transactions: [], monthlyRewards: [], totalRewards: [] };
   try {
     if (!Array.isArray(transactions) || transactions.length === 0) {
-      return { transactions: [], monthlyRewards: [], totalRewards: [] };
+      return result;
     }
 
     const processedData = transactions.reduce(
@@ -159,12 +189,15 @@ export const processTransactions = (transactions) => {
     const sortedMonthly = sortMonthlyRewards(Object.values(processedData.monthlyRewards));
     const sortedTotal = sortTotalRewards(Object.values(processedData.totalRewards));
 
-    return {
+    result = {
       transactions: sortedTransactions,
       monthlyRewards: sortedMonthly,
       totalRewards: sortedTotal,
     };
+    return result;
   } catch (error) {
     throw new Error(`processTransactions failed: ${error?.message ?? String(error)}`);
+  } finally {
+    logger.debug(`processTransactions finished, transactions: ${result.transactions.length}`);
   }
 };

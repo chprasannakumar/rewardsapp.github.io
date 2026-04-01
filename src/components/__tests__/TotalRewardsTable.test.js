@@ -44,24 +44,70 @@ describe('TotalRewardsTable — rendering', () => {
     render(<TotalRewardsTable rewards={mockRewards} isLoading={true} />);
     expect(screen.getByText(/Processing/i)).toBeInTheDocument();
   });
+
+  test('does not show loading overlay when isLoading is false', () => {
+    render(<TotalRewardsTable rewards={mockRewards} isLoading={false} />);
+    expect(screen.queryByText(/Processing/i)).not.toBeInTheDocument();
+  });
+
+  test('isLoading defaults to falsy when not provided', () => {
+    expect(() => render(<TotalRewardsTable rewards={mockRewards} />)).not.toThrow();
+  });
 });
 
-// ─── renderCell — all columns + null branches ─────────────────────────────────
+// ─── renderCell — all columns + null/default branches ────────────────────────
 
 describe('TotalRewardsTable — renderCell branches', () => {
-  test('renders — for null customerName', () => {
+  test('customerName: renders name string', () => {
+    render(<TotalRewardsTable rewards={[mockRewards[0]]} />);
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+  });
+
+  test('customerName: renders em-dash for null customerName', () => {
     render(<TotalRewardsTable rewards={[{ ...mockRewards[0], customerName: null }]} />);
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  test('renders 0 for null points', () => {
+  test('points: renders numeric value', () => {
+    render(<TotalRewardsTable rewards={[mockRewards[1]]} />);
+    expect(screen.getByText('200')).toBeInTheDocument();
+  });
+
+  test('points: renders 0 for null points', () => {
     render(<TotalRewardsTable rewards={[{ ...mockRewards[0], points: null }]} />);
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 
+  test('points: renders 0 for undefined points', () => {
+    render(<TotalRewardsTable rewards={[{ ...mockRewards[0], points: undefined }]} />);
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  test('points: formats large numbers with locale commas', () => {
+    render(<TotalRewardsTable rewards={[{ customerId: 'X', customerName: 'X', points: 1000000 }]} />);
+    expect(screen.getByText('1,000,000')).toBeInTheDocument();
+  });
+
   test('default case returns null without crash', () => {
-    // Rendering with valid data exercises all real cases; default is unreachable normally
     expect(() => render(<TotalRewardsTable rewards={mockRewards} />)).not.toThrow();
+  });
+});
+
+// ─── sortedRewards — non-array guard ─────────────────────────────────────────
+
+describe('TotalRewardsTable — sortedRewards non-array guard', () => {
+  test('renders empty table when rewards is null (guard returns [])', () => {
+    expect(() => render(<TotalRewardsTable rewards={null} />)).not.toThrow();
+    expect(screen.getByText(/No total rewards/i)).toBeInTheDocument();
+  });
+
+  test('renders empty table when rewards is undefined', () => {
+    expect(() => render(<TotalRewardsTable rewards={undefined} />)).not.toThrow();
+  });
+
+  test('renders empty table for empty array', () => {
+    render(<TotalRewardsTable rewards={[]} />);
+    expect(screen.getByText(/No total rewards/i)).toBeInTheDocument();
   });
 });
 
@@ -88,7 +134,6 @@ describe('TotalRewardsTable — sorting', () => {
   });
 
   test('sort covers bValue < aValue and bValue > aValue branches', () => {
-    // Ensure all three sort outcomes (1, -1, 0) are exercised
     const rewardsWithTie = [
       { customerId: 'A', customerName: 'Alpha', points: 100 },
       { customerId: 'B', customerName: 'Beta',  points: 100 }, // tie → return 0
@@ -102,18 +147,37 @@ describe('TotalRewardsTable — sorting', () => {
 
   test('handleRequestSort same property flips order (isAsc branch)', () => {
     render(<TotalRewardsTable rewards={mockRewards} />);
-    // Initial orderBy is 'points' desc — clicking points again should flip to asc
     fireEvent.click(screen.getByText(/Total Reward Points/i));
-    // And again back to desc
     fireEvent.click(screen.getByText(/Total Reward Points/i));
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
   });
 
   test('handleRequestSort different property sets new orderBy', () => {
     render(<TotalRewardsTable rewards={mockRewards} />);
-    // Start on points, switch to customerName
     fireEvent.click(screen.getByText('Customer Name'));
     expect(screen.getByText('Bob Lee')).toBeInTheDocument();
+  });
+
+  test('sort bValue < aValue branch: ASC puts higher value last', () => {
+    const data = [
+      { customerId: 'L', customerName: 'Low',  points: 10 },
+      { customerId: 'H', customerName: 'High', points: 500 },
+    ];
+    render(<TotalRewardsTable rewards={data} />);
+    fireEvent.click(screen.getByText(/Total Reward Points/i)); // flip to ASC
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].textContent).toContain('Low');
+  });
+
+  test('sort bValue > aValue branch: DESC puts higher value first', () => {
+    const data = [
+      { customerId: 'L', customerName: 'Low',  points: 10 },
+      { customerId: 'H', customerName: 'High', points: 500 },
+    ];
+    render(<TotalRewardsTable rewards={data} />);
+    // Default is DESC by points; High should be first
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].textContent).toContain('High');
   });
 });
 
@@ -130,10 +194,49 @@ describe('TotalRewardsTable — rowKey', () => {
   });
 });
 
-// ─── sortedRewards guard ──────────────────────────────────────────────────────
+// ─── ErrorBoundary wrapping ───────────────────────────────────────────────────
 
-describe('TotalRewardsTable — non-array rewards guard', () => {
-  test('renders without crash when rewards is an empty array', () => {
-    expect(() => render(<TotalRewardsTable rewards={[]} />)).not.toThrow();
+describe('TotalRewardsTable — ErrorBoundary wrapping', () => {
+  test('renders normally when there is no error', () => {
+    render(<TotalRewardsTable rewards={mockRewards} />);
+    expect(screen.getByText(/Leaderboard/i)).toBeInTheDocument();
+  });
+
+  test('ErrorBoundary catches thrown render error and shows fallback', () => {
+    const err = console.error;
+    console.error = jest.fn();
+
+    const EB = require('../common/ErrorBoundary').default;
+    const Throw = () => { throw new Error('boundary test'); };
+
+    render(<EB><Throw /></EB>);
+
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByText(/boundary test/)).toBeInTheDocument();
+
+    console.error = err;
+  });
+
+  test('ErrorBoundary Try Again resets the error state', () => {
+    const err = console.error;
+    console.error = jest.fn();
+
+    let shouldThrow = true;
+    const MaybeThrow = () => {
+      if (shouldThrow) throw new Error('reset test');
+      return <div>Recovered</div>;
+    };
+
+    const EB = require('../common/ErrorBoundary').default;
+    const { rerender } = render(<EB><MaybeThrow /></EB>);
+
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+
+    shouldThrow = false;
+    fireEvent.click(screen.getByRole('button', { name: /Try Again/i }));
+    rerender(<EB><MaybeThrow /></EB>);
+    expect(screen.getByText('Recovered')).toBeInTheDocument();
+
+    console.error = err;
   });
 });

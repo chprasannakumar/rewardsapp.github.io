@@ -75,25 +75,18 @@ const Dashboard = () => {
   const { transactions, monthlyRewards, totalRewards, isLoading, isUpdating, error } = dashboardState;
 
   const filteredData = useMemo(() => {
+    // Filters apply to Recent Transactions table only.
+    // Monthly Aggregates and Leaderboard always show unfiltered totals.
     let txs = Array.isArray(transactions) ? [...transactions] : [];
-    let monthly = Array.isArray(monthlyRewards) ? [...monthlyRewards] : [];
-    let total = Array.isArray(totalRewards) ? [...totalRewards] : [];
 
     if (filters.userId !== 'all') {
       txs = txs.filter(t => t?.customerId === filters.userId);
-      monthly = monthly.filter(r => r?.customerId === filters.userId);
-      total = total.filter(r => r?.customerId === filters.userId);
     }
 
     if (filters.month !== 'all') {
       txs = txs.filter(t => {
         if (!t?.purchaseDate) return false;
         return new Date(t.purchaseDate).getMonth().toString() === filters.month;
-      });
-      monthly = monthly.filter(r => {
-        if (!r?.month || !r?.year) return false;
-        const mDate = new Date(`${r.month} 1, ${r.year}`);
-        return mDate.getMonth().toString() === filters.month;
       });
     }
 
@@ -103,11 +96,13 @@ const Dashboard = () => {
         t?.customerName?.toLowerCase().includes(s) ||
         t?.productPurchased?.toLowerCase().includes(s)
       );
-      monthly = monthly.filter(r => r?.customerName?.toLowerCase().includes(s));
-      total = total.filter(r => r?.customerName?.toLowerCase().includes(s));
     }
 
-    return { txs, monthly, total };
+    return {
+      txs,
+      monthly: Array.isArray(monthlyRewards) ? monthlyRewards : [],
+      total: Array.isArray(totalRewards) ? totalRewards : [],
+    };
   }, [transactions, monthlyRewards, totalRewards, filters]);
 
   const updateFilters = useCallback((key, value) => {
