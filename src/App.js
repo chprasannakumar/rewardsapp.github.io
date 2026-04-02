@@ -1,5 +1,4 @@
 import React, { lazy, Suspense } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ThemeProvider from '@mui/material/styles/ThemeProvider';
 import createTheme from '@mui/material/styles/createTheme';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -51,14 +50,9 @@ function App() {
   return (
     <ThemeProvider theme={lightTheme}>
       <CssBaseline />
-      <HashRouter>
         <Suspense fallback={<Loader />}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+            <Dashboard />
         </Suspense>
-      </HashRouter>
     </ThemeProvider>
   );
 }
