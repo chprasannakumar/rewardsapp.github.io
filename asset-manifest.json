@@ -1,17 +1,17 @@
 {
   "files": {
     "main.css": "/rewardsapp.github.io/static/css/main.e94789cf.css",
-    "main.js": "/rewardsapp.github.io/static/js/main.ef98403c.js",
-    "static/js/316.93659949.chunk.js": "/rewardsapp.github.io/static/js/316.93659949.chunk.js",
+    "main.js": "/rewardsapp.github.io/static/js/main.20667df8.js",
+    "static/js/316.56b40461.chunk.js": "/rewardsapp.github.io/static/js/316.56b40461.chunk.js",
     "static/js/189.55461e67.chunk.js": "/rewardsapp.github.io/static/js/189.55461e67.chunk.js",
     "index.html": "/rewardsapp.github.io/index.html",
     "main.e94789cf.css.map": "/rewardsapp.github.io/static/css/main.e94789cf.css.map",
-    "main.ef98403c.js.map": "/rewardsapp.github.io/static/js/main.ef98403c.js.map",
-    "316.93659949.chunk.js.map": "/rewardsapp.github.io/static/js/316.93659949.chunk.js.map",
+    "main.20667df8.js.map": "/rewardsapp.github.io/static/js/main.20667df8.js.map",
+    "316.56b40461.chunk.js.map": "/rewardsapp.github.io/static/js/316.56b40461.chunk.js.map",
     "189.55461e67.chunk.js.map": "/rewardsapp.github.io/static/js/189.55461e67.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e94789cf.css",
-    "static/js/main.ef98403c.js"
+    "static/js/main.20667df8.js"
   ]
 }
